@@ -459,4 +459,4 @@
     }
 })();
 </script>
-<?php /**PATH /home/oversize/public_html/resources/views/backEnd/layouts/partials/admin_order_live_notify.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\laragon\www\oversizebazar\resources\views/backEnd/layouts/partials/admin_order_live_notify.blade.php ENDPATH**/ ?>

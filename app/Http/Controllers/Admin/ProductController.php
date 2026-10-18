@@ -69,7 +69,7 @@ class ProductController extends Controller
         // Show only vendor products (all vendor products)
         $query = Product::whereNotNull('vendor_id')
             ->orderBy('id','DESC')
-            ->with('image','category','vendor');
+            ->with('image','category','vendor','variantPrices.size');
 
         if ($request->keyword) {
             $query->where('name', 'LIKE', '%' . $request->keyword . "%");
@@ -355,7 +355,8 @@ class ProductController extends Controller
             'vendor',
             'colors',
             'sizes',
-            'variantPrices',
+            'variantPrices.color',
+            'variantPrices.size',
             'wholesalePrices'
         ])->findOrFail($id);
             

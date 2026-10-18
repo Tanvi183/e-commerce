@@ -210,9 +210,11 @@
                         <div class="row align-items-center">
                             <div class="col-md-6">
                                 <p class="mb-1 text-muted fw-bold">Current Stock</p>
-                                <h4 class="mb-0 {{ $product->stock <= 5 ? 'text-danger' : 'text-success' }}">
-                                    {{ $product->stock }} <small class="font-size-14 text-muted">{{ $product->pro_unit }}</small>
+                                @php $totalStock = $product->totalStock(); @endphp
+                                <h4 class="mb-0 {{ $totalStock <= 5 ? 'text-danger' : 'text-success' }}">
+                                    {{ $totalStock }} <small class="font-size-14 text-muted">{{ $product->pro_unit }}</small>
                                 </h4>
+                                @include('backEnd.product.partials.size_stock', ['product' => $product])
                             </div>
                             <div class="col-md-6 border-start">
                                 <p class="mb-1 text-muted fw-bold">Purchase Price</p>

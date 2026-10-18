@@ -215,6 +215,25 @@ class ShoppingController extends Controller
         $colorId = $request->filled('product_color') ? (int) $request->product_color : null;
         $sizeId  = $request->filled('product_size') ? (int) $request->product_size : null;
 
+        // 📦 সাইজ / ভ্যারিয়েন্ট স্টক চেক
+        $stock = $product->variantStock($colorId, $sizeId);
+        $needsSize = !$sizeId && ProductVariantPrice::where('product_id', $product->id)->whereNotNull('size_id')->exists();
+        if ($stock !== null && ($qty > $stock || $needsSize)) {
+            if ($stock <= 0) {
+                $message = 'Stock Out';
+            } elseif ($needsSize) {
+                $message = 'সাইজ সিলেক্ট করুন';
+            } else {
+                $message = 'এই সাইজে মাত্র ' . $stock . ' টি স্টকে আছে';
+            }
+
+            if ($request->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 422);
+            }
+            Toastr::error($message, 'Error!');
+            return redirect()->back();
+        }
+
         $price = $product->resolveSalePrice($qty, $colorId, $sizeId);
 
         if ($price <= 0) {

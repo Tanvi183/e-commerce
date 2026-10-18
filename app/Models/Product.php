@@ -202,20 +202,9 @@ class Product extends Model
     {
         $price = (float) ($this->new_price ?? 0);
 
-        if ($colorId || $sizeId) {
-            $query = ProductVariantPrice::where('product_id', $this->id);
-
-            if ($colorId && $sizeId) {
-                $variant = (clone $query)->where('color_id', $colorId)->where('size_id', $sizeId)->first();
-            } elseif ($colorId) {
-                $variant = (clone $query)->where('color_id', $colorId)->whereNull('size_id')->first();
-            } else {
-                $variant = (clone $query)->where('size_id', $sizeId)->whereNull('color_id')->first();
-            }
-
-            if ($variant && (float) $variant->price > 0) {
-                $price = (float) $variant->price;
-            }
+        $variant = $this->findVariant($colorId, $sizeId);
+        if ($variant && (float) $variant->price > 0) {
+            $price = (float) $variant->price;
         }
 
         $wholesale = $this->getWholesalePriceForQuantity($qty);
@@ -224,5 +213,79 @@ class Product extends Model
         }
 
         return $price;
+    }
+
+    /**
+     * কালার / সাইজ অনুযায়ী ভ্যারিয়েন্ট
+     */
+    public function findVariant(?int $colorId = null, ?int $sizeId = null): ?ProductVariantPrice
+    {
+        if (!$colorId && !$sizeId) {
+            return null;
+        }
+
+        $query = ProductVariantPrice::where('product_id', $this->id);
+
+        if ($colorId && $sizeId) {
+            return $query->where('color_id', $colorId)->where('size_id', $sizeId)->first();
+        }
+        if ($colorId) {
+            return $query->where('color_id', $colorId)->whereNull('size_id')->first();
+        }
+
+        return $query->where('size_id', $sizeId)->whereNull('color_id')->first();
+    }
+
+    /**
+     * সিলেক্টেড সাইজ / ভ্যারিয়েন্টের স্টক (প্রোডাক্টে ভ্যারিয়েন্ট না থাকলে null)
+     * কিছু সিলেক্ট না থাকলে সব ভ্যারিয়েন্টের মোট স্টক
+     */
+    public function variantStock(?int $colorId = null, ?int $sizeId = null): ?int
+    {
+        $query = ProductVariantPrice::where('product_id', $this->id);
+        if (!(clone $query)->exists()) {
+            return null;
+        }
+
+        $variant = $this->findVariant($colorId, $sizeId);
+        if ($variant) {
+            return (int) $variant->stock;
+        }
+
+        if ($colorId) {
+            $query->where('color_id', $colorId);
+        }
+        if ($sizeId) {
+            $query->where('size_id', $sizeId);
+        }
+
+        return (int) $query->sum('stock');
+    }
+
+    /**
+     * অ্যাডমিনে দেখানোর স্টক: ভ্যারিয়েন্ট থাকলে সব ভ্যারিয়েন্টের মোট, না থাকলে প্রোডাক্টের stock
+     */
+    public function totalStock(): int
+    {
+        if ($this->variantPrices->isNotEmpty()) {
+            return (int) $this->variantPrices->sum('stock');
+        }
+
+        return (int) ($this->stock ?? 0);
+    }
+
+    /**
+     * সাইজ অনুযায়ী স্টক [সাইজের নাম => স্টক]
+     */
+    public function sizeStocks(): \Illuminate\Support\Collection
+    {
+        return $this->variantPrices
+            ->whereNotNull('size_id')
+            ->groupBy('size_id')
+            ->mapWithKeys(function ($rows) {
+                $size = $rows->first()->size;
+                $name = $size ? ($size->sizeName ?? $size->name) : '#' . $rows->first()->size_id;
+                return [$name => (int) $rows->sum('stock')];
+            });
     }
 }

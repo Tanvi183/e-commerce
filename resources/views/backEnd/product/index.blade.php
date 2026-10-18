@@ -335,7 +335,9 @@
                         </td>
                         <td>
                             <div class="fw-semibold">৳{{ number_format($value->new_price, 2) }}</div>
-                            <div class="small text-muted">স্টক: <span class="{{ $value->stock <= 5 ? 'text-danger fw-bold' : '' }}">{{ $value->stock }}</span></div>
+                            @php $totalStock = $value->totalStock(); @endphp
+                            <div class="small text-muted">স্টক: <span class="{{ $totalStock <= 5 ? 'text-danger fw-bold' : '' }}">{{ $totalStock }}</span></div>
+                            @include('backEnd.product.partials.size_stock', ['product' => $value])
                         </td>
                         <td>
                             <div class="d-flex flex-column gap-1">

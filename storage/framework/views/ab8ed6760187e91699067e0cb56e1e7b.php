@@ -396,4 +396,4 @@
     if (typeof feather !== 'undefined') feather.replace();
 })();
 </script>
-<?php /**PATH /home/oversize/public_html/resources/views/backEnd/layouts/partials/gemini_admin_chatbot.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\laragon\www\oversizebazar\resources\views/backEnd/layouts/partials/gemini_admin_chatbot.blade.php ENDPATH**/ ?>

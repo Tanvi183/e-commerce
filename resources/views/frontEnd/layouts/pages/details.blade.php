@@ -148,6 +148,65 @@
 #content .pro_details_area .product-video-sticky-wrap {
     z-index: 20;
 }
+
+/* 📦 Size wise stock */
+.pro-size .selector-item {
+    flex-direction: column;
+}
+.pro-size .size-stock {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-top: 3px;
+    white-space: nowrap;
+}
+.pro-size .size-stock.in-stock {
+    color: #28a745;
+}
+.pro-size .size-stock.out-stock {
+    color: #dc3545;
+}
+.pro-size .selector-item_label.is-stock-out {
+    opacity: .5;
+    text-decoration: line-through;
+}
+
+/* 🚫 Stock out হলে Cart / Order বাটন disable + hover message */
+.single_product .stock-guard {
+    position: relative;
+    flex: 1 1 0;
+    display: block;
+}
+.single_product .stock-guard + .stock-guard {
+    margin-left: 5px;
+}
+.single_product .stock-guard > input {
+    width: 100%;
+    margin-left: 0;
+}
+.single_product .stock-guard.is-stock-out {
+    cursor: not-allowed;
+}
+.single_product .stock-guard > input:disabled {
+    opacity: .55;
+    pointer-events: none;
+}
+.single_product .stock-guard.is-stock-out:hover::after {
+    content: attr(data-stock-msg);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 4px);
+    transform: translateX(-50%);
+    background: #dc3545;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    white-space: nowrap;
+    z-index: 30;
+}
 </style>
 @endpush
 
@@ -361,6 +420,9 @@
                 <div class="size-container">
                     <div class="selector">
                         @foreach ($productsizes as $prosize)
+                            @php
+                                $sizeStock = (int) $details->variantPrices->where('size_id', $prosize->id)->sum('stock');
+                            @endphp
                             <div class="selector-item">
                                 {{-- ✅ এখন size_id পাঠানো হচ্ছে --}}
                                 <input type="radio"
@@ -369,9 +431,13 @@
                                     name="product_size"
                                     class="selector-item_radio emptyalert"
                                     required />
-                                <label for="f-option{{ $prosize->id }}" class="selector-item_label">
+                                <label for="f-option{{ $prosize->id }}" class="selector-item_label {{ $sizeStock > 0 ? '' : 'is-stock-out' }}">
                                     {{ $prosize->sizeName ?? $prosize->name }}
                                 </label>
+                                {{-- 📦 সাইজ অনুযায়ী স্টক --}}
+                                <span class="size-stock {{ $sizeStock > 0 ? 'in-stock' : 'out-stock' }}" data-size-id="{{ $prosize->id }}">
+                                    {{ $sizeStock > 0 ? 'Stock: ' . $sizeStock : 'Stock Out' }}
+                                </span>
                             </div>
                         @endforeach
                     </div>
@@ -414,8 +480,12 @@
                                                                 </div>
                                                             </div>
                                                             <div class="d-flex single_product col-sm-12">
-                                                  <input type="submit" class="btn px-4 add_cart_btn cart_store" data-id="{{ $details->id }}" onclick="return sendSuccess();" name="add_cart" value="কার্টে যোগ করুন" />
-<input type="submit" class="btn px-4 order_now_btn order_now_btn_m" onclick="return sendSuccess();" name="order_now" value="অর্ডার করুন" />
+                                                  <span class="stock-guard" data-stock-msg="Stock Out">
+                                                      <input type="submit" class="btn px-4 add_cart_btn cart_store" data-id="{{ $details->id }}" onclick="return sendSuccess(event);" name="add_cart" value="কার্টে যোগ করুন" />
+                                                  </span>
+                                                  <span class="stock-guard" data-stock-msg="Stock Out">
+                                                      <input type="submit" class="btn px-4 order_now_btn order_now_btn_m" onclick="return sendSuccess(event);" name="order_now" value="অর্ডার করুন" />
+                                                  </span>
                                                             </div>
                                                         </div>
                                                         <div class="mt-md-2 mt-2">
@@ -863,8 +933,50 @@
         $('#newPrice').text('৳' + basePrice.toFixed(2));
     }
 
+    // 📦 সাইজ / ভ্যারিয়েন্ট অনুযায়ী স্টক
+    function variantStock(list) {
+        return list.reduce((sum, v) => sum + (parseInt(v.stock, 10) || 0), 0);
+    }
+
+    function updateStockState() {
+        if (!variants.length) return;
+
+        let $form = $('form[name="formName"]');
+        let color = $form.find('input[name="product_color"]:checked').val() || null;
+        let size  = $form.find('input[name="product_size"]:checked').val() || null;
+
+        // কালার সিলেক্ট থাকলে ঐ কালারের সাইজ স্টক, না থাকলে সব কালারের মোট
+        $form.find('.size-stock').each(function() {
+            let sizeId = String($(this).data('size-id'));
+            let stock = variantStock(variants.filter(v =>
+                String(v.size_id) === sizeId && (!color || String(v.color_id) === String(color))
+            ));
+            $(this)
+                .text(stock > 0 ? 'Stock: ' + stock : 'Stock Out')
+                .toggleClass('in-stock', stock > 0)
+                .toggleClass('out-stock', stock <= 0);
+            $('label[for="f-option' + sizeId + '"]').toggleClass('is-stock-out', stock <= 0);
+        });
+
+        // সিলেক্টেড সাইজ / কালারের স্টক; কিছু সিলেক্ট না থাকলে সব ভ্যারিয়েন্টের মোট স্টক
+        let selectedStock = variantStock(variants.filter(v =>
+            (!size || String(v.size_id) === String(size)) && (!color || String(v.color_id) === String(color))
+        ));
+
+        let stockOut = selectedStock <= 0;
+        $form.find('.stock-guard').toggleClass('is-stock-out', stockOut)
+            .find('input[type="submit"]').prop('disabled', stockOut);
+    }
+
     $(document).ready(function() {
         updateDisplayedPrice();
+        updateStockState();
+
+        $(document).on(
+            'change',
+            'form[name="formName"] input[name="product_color"], form[name="formName"] input[name="product_size"]',
+            updateStockState
+        );
 
         $(document).on(
             'change',
@@ -1277,20 +1389,30 @@
 </script>
 
 <script>
-    function sendSuccess() {
+    function sendSuccess(e) {
         var form = document.forms['formName'];
         if (!form) return true;
 
+        // ভ্যালিডেশন ফেল হলে master layout এর ajax (.cart_store) হ্যান্ডলারেও যেন না যায়
+        function block() {
+            if (e && e.stopPropagation) e.stopPropagation();
+            return false;
+        }
+
+        if (form.querySelector('.stock-guard.is-stock-out')) {
+            toastr.error('Stock Out');
+            return block();
+        }
         if (form.querySelector('input[name="product_size"]')) {
             if (!form.querySelector('input[name="product_size"]:checked')) {
                 toastr.warning('সাইজ সিলেক্ট করুন');
-                return false;
+                return block();
             }
         }
         if (form.querySelector('input[name="product_color"]')) {
             if (!form.querySelector('input[name="product_color"]:checked')) {
                 toastr.error('রঙ সিলেক্ট করুন');
-                return false;
+                return block();
             }
         }
 

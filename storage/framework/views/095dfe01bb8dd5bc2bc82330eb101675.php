@@ -1495,4 +1495,4 @@
     <?php echo $__env->yieldContent('script'); ?>
   </body>
 </html>
-<?php /**PATH /home/oversize/public_html/resources/views/backEnd/layouts/master.blade.php ENDPATH**/ ?>
+<?php /**PATH C:\laragon\www\oversizebazar\resources\views/backEnd/layouts/master.blade.php ENDPATH**/ ?>
