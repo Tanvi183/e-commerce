@@ -937,6 +937,7 @@ Route::get('dashboard', [DashboardController::class, 'dashboard'])->name('admin.
     Route::post('color/save', [ColorController::class,'store'])->name('colors.store');
     Route::get('color/{id}/edit', [ColorController::class,'edit'])->name('colors.edit');
     Route::post('color/update', [ColorController::class,'update'])->name('colors.update');
+    Route::post('color/quick-save', [ColorController::class,'quickSave'])->name('colors.quick_save');
     Route::post('color/inactive', [ColorController::class,'inactive'])->name('colors.inactive');
     Route::post('color/active', [ColorController::class,'active'])->name('colors.active');
     Route::post('color/destroy', [ColorController::class,'destroy'])->name('colors.destroy');

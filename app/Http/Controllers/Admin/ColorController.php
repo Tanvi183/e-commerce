@@ -15,6 +15,32 @@ class ColorController extends Controller
          $this->middleware('permission:color-create', ['only' => ['create','store']]);
          $this->middleware('permission:color-edit', ['only' => ['edit','update']]);
          $this->middleware('permission:color-delete', ['only' => ['destroy']]);
+         $this->middleware('permission:color-create|color-edit', ['only' => ['quickSave']]);
+    }
+
+    /**
+     * প্রোডাক্ট ফর্মের ভ্যারিয়েন্ট সেকশন থেকে AJAX এ কালার তৈরি / এডিট
+     */
+    public function quickSave(Request $request)
+    {
+        $data = $request->validate([
+            'id'        => 'nullable|integer|exists:colors,id',
+            'colorName' => 'required|string|max:100',
+            'color'     => ['required', 'regex:/^#[0-9A-Fa-f]{6}$/'],
+        ]);
+
+        $permission = !empty($data['id']) ? 'color-edit' : 'color-create';
+        if (!auth()->user()->can($permission)) {
+            return response()->json(['success' => false, 'message' => 'এই কাজের অনুমতি নেই'], 403);
+        }
+
+        $color = !empty($data['id']) ? Color::findOrFail($data['id']) : new Color(['status' => 1]);
+        $color->fill(['colorName' => $data['colorName'], 'color' => $data['color']])->save();
+
+        return response()->json([
+            'success' => true,
+            'color'   => ['id' => $color->id, 'name' => $color->colorName, 'hex' => $color->color],
+        ]);
     }
     public function index(Request $request)
     {
